@@ -1,3 +1,4 @@
+import 'package:crudtutorial/services/firestore.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
@@ -8,17 +9,22 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+
+  final TextEditingController _noteController = TextEditingController();
+  final FirestoreService _firestoreService = FirestoreService();
+  
   //open a dialog box to add a new note
   void openNoteBox(){
     showDialog(context: context, builder: (context)=>AlertDialog(
       title: const Text("Add a new note"),
       content: TextField(
+        controller: _noteController,
         decoration: const InputDecoration(
           hintText: "Enter your note here",
         ),
       ),
       actions: [
-        TextButton(
+        ElevatedButton(
           onPressed: () {
             Navigator.of(context).pop();
           },
@@ -27,6 +33,13 @@ class _HomePageState extends State<HomePage> {
         TextButton(
           onPressed: () {
             //add note to database
+            _firestoreService.addNote(_noteController.text);
+
+            //clear the text field
+            _noteController.clear();
+
+            //close the dialog box
+            Navigator.of(context).pop();
           },
           child: const Text("Add"),
         ),
@@ -52,7 +65,7 @@ class _HomePageState extends State<HomePage> {
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: openNoteBox, // Connect to the openNoteBox function
         backgroundColor: Colors.blue,
         child: const Icon(
           Icons.add,
