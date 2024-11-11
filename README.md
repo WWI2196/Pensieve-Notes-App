@@ -9,7 +9,6 @@ A modern, feature-rich note-taking application built with Flutter and Firebase. 
 - **Customizable Note Types**: Create and manage different categories for your notes with custom colors
 - **Real-time Sync**: All notes are automatically synchronized using Firebase
 - **Modern UI**: Clean and intuitive interface following Material Design 3 guidelines
-- **Dark Mode**: Built-in dark mode support for comfortable note-taking at night
 - **Smooth Animations**: Polished user experience with carefully crafted animations
 - **Responsive Design**: Works seamlessly across different screen sizes
 
@@ -37,7 +36,7 @@ A modern, feature-rich note-taking application built with Flutter and Firebase. 
 
 1. Clone the repository
 ```sh
-git clone https://github.com/WWI2196/crudtutorial.git
+git clone https://github.com/WWI2196/Pensieve-Notes-App.git
 ```
 
 2. Install dependencies
