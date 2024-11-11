@@ -3,6 +3,7 @@ import 'package:crudtutorial/services/firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:async';
+import '../widgets/custom_dialogs.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -55,58 +56,25 @@ class _HomePageState extends State<HomePage> {
   }
 
   void openNoteBox() {
-    _selectedType = NoteType.personal; // Add this line
-    _selectedTypeNotifier.value = NoteType.personal; // Add this line
+    _selectedType = NoteType.personal;
+    _selectedTypeNotifier.value = NoteType.personal;
     
-    showDialog(
+    CustomDialogs.showAddNoteDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Add a new note"),
-        content: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTextField(
-                controller: _titleController,
-                hint: "Enter note title",
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 8),
-              _buildTextField(
-                controller: _contentController,
-                hint: "Enter note content",
-                maxLines: 3,
-              ),
-              const SizedBox(height: 8),
-              _buildNoteTypeSelector(),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _clearControllers();
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              if (_formKey.currentState?.validate() ?? false) {
-                _firestoreService.addNote(
-                  title: _titleController.text,
-                  content: _contentController.text,
-                  type: _selectedType,
-                );
-                _clearControllers();
-                Navigator.pop(context);
-              }
-            },
-            child: const Text("Add"),
-          ),
-        ],
-      ),
+      titleController: _titleController,
+      contentController: _contentController,
+      selectedTypeNotifier: _selectedTypeNotifier,
+      typesNotifier: _typesNotifier,
+      formKey: _formKey,
+      addCustomNoteType: _addCustomNoteType,
+      onAdd: (title, content, type) {
+        _firestoreService.addNote(
+          title: title,
+          content: content,
+          type: type,
+        );
+      },
+      clearControllers: _clearControllers,
     );
   }
 
@@ -127,7 +95,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Form(
-              child: _buildTextField(
+              child: CustomDialogs.buildTextField(
                 controller: _newTypeController,
                 hint: "Enter type name",
                 validator: (value) {
@@ -389,38 +357,6 @@ class _HomePageState extends State<HomePage> {
     },
   );
 }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    int maxLines = 1,
-    TextInputAction? textInputAction,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: hint,
-        border: const OutlineInputBorder(),
-      ),
-      maxLines: maxLines,
-      textInputAction: textInputAction,
-      validator: validator ?? _validateInput,
-      enableInteractiveSelection: true,
-      contextMenuBuilder: (context, editableTextState) {
-        return AdaptiveTextSelectionToolbar.editableText(
-          editableTextState: editableTextState,
-        );
-      },
-    );
-  }
-
-  String? _validateInput(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'This field cannot be empty';
-    }
-    return null;
-  }
 
   Future<void> _handleAsyncOperation(Future<void> Function() operation) async {
     try {
@@ -687,79 +623,24 @@ class _HomePageState extends State<HomePage> {
   String currentContent,
   NoteType currentType,
 ) {
-  final titleController = TextEditingController(text: currentTitle);
-  final contentController = TextEditingController(text: currentContent);
-  final typeNotifier = ValueNotifier<NoteType>(currentType);
-
-  showDialog(
+  CustomDialogs.showUpdateNoteDialog(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text("Edit note"),
-      content: SingleChildScrollView(
-        child: StatefulBuilder(
-          builder: (context, setDialogState) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTextField(
-                controller: titleController,
-                hint: "Enter note title",
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 8),
-              _buildTextField(
-                controller: contentController,
-                hint: "Enter note content",
-                maxLines: 5, // Increased max lines
-              ),
-              const SizedBox(height: 8),
-              ValueListenableBuilder<NoteType>(
-                valueListenable: typeNotifier,
-                builder: (context, selectedType, _) {
-                  return NoteTypeSelector(
-                    selectedType: selectedType,
-                    onTypeChanged: (value) {
-                      setDialogState(() {
-                        typeNotifier.value = value;
-                      });
-                    },
-                    onAddPressed: () {
-                      Navigator.pop(context);
-                      _addCustomNoteType();
-                    },
-                    typesNotifier: _typesNotifier,
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
-        ),
-        TextButton(
-          onPressed: () {
-            if (titleController.text.isNotEmpty && 
-                contentController.text.isNotEmpty) {
-              _handleAsyncOperation(() async {
-                await _firestoreService.updateNote(
-                  docID: docId,
-                  title: titleController.text,
-                  content: contentController.text,
-                  type: typeNotifier.value,
-                );
-                if (mounted) {
-                  Navigator.pop(context);
-                }
-              });
-            }
-          },
-          child: const Text("Update"),
-        ),
-      ],
-    ),
+    docId: docId,
+    currentTitle: currentTitle,
+    currentContent: currentContent,
+    currentType: currentType,
+    typesNotifier: _typesNotifier,
+    onUpdate: (docId, title, content, type) {
+      _handleAsyncOperation(() async {
+        await _firestoreService.updateNote(
+          docID: docId,
+          title: title,
+          content: content,
+          type: type,
+        );
+      });
+    },
+    addCustomNoteType: _addCustomNoteType,
   );
 }
 }
