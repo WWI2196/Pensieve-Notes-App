@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crudtutorial/constants.dart';
 import 'package:crudtutorial/services/animations.dart';
@@ -829,79 +831,212 @@ String _formatDate(Timestamp timestamp) {
   Map<String, dynamic> data,
   NoteType noteType,
 ) {
+  final screenSize = MediaQuery.of(context).size;
+  final maxHeight = screenSize.height * 0.8;
+  final maxWidth = min(screenSize.width * 0.9, 600.0);
+  final theme = Theme.of(context);
+
   showDialog(
     context: context,
-    builder: (context) => AlertDialog(
-      title: ConstrainedBox(  // Add this wrapper
-        constraints: const BoxConstraints(maxWidth: 300), // Adjust width as needed
-        child: Row(
-          mainAxisSize: MainAxisSize.min, // Add this
-          children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: noteType.color,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible( // Change Expanded to Flexible
-              child: Text(
-                data['title'] ?? '',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+    builder: (context) => Dialog(
+      backgroundColor: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
       ),
-      content: SingleChildScrollView(
-        child: ConstrainedBox( // Add constraints
-          constraints: const BoxConstraints(
-            maxWidth: 300,
-            maxHeight: 400,
-          ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: maxHeight,
+          maxWidth: maxWidth,
+          minHeight: 200,
+          minWidth: 300,
+        ),
+        child: IntrinsicHeight(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                data['content'] ?? '',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              Wrap( // Use Wrap instead of Row for chips
-                spacing: 8,
-                children: [
-                  Chip(
-                    label: Text(data['type']),
-                    backgroundColor: noteType.color.withOpacity(0.1),
-                    labelStyle: TextStyle(color: noteType.color),
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: noteType.color.withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
-                ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top row with icon and close button
+                    Row(
+                      children: [
+                        _buildTypeIcon(noteType),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            data['title'] ?? '',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          style: IconButton.styleFrom(
+                            backgroundColor: theme.colorScheme.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Metadata row
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: noteType.color.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getNoteTypeIcon(noteType.name),
+                                size: 16,
+                                color: noteType.color,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                data['type'] ?? '',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: noteType.color,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.access_time,
+                                size: 16,
+                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _formatDate(data['timestamp'] ?? Timestamp.now()),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Rest of the dialog content remains the same
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outline.withOpacity(0.2),
+                      ),
+                    ),
+                    child: SelectableText(
+                      data['content'] ?? '',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        height: 1.5,
+                        color: theme.colorScheme.onSurface.withOpacity(0.8),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Actions container remains the same
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  border: Border(
+                    top: BorderSide(
+                      color: theme.colorScheme.outline.withOpacity(0.2),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      icon: const Icon(Icons.close),
+                      label: const Text('Close'),
+                      style: TextButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: noteType.color,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showUpdateDialog(
+                          doc.id,
+                          data['title'],
+                          data['content'],
+                          noteType,
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            _showUpdateDialog(
-              doc.id,
-              data['title'],
-              data['content'],
-              noteType,
-            );
-          },
-          child: const Text('Edit'),
-        ),
-      ],
     ),
   );
 }
