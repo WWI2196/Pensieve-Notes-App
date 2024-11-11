@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crudtutorial/services/firestore.dart';
+import 'package:crudtutorial/services/types_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:async';
@@ -18,12 +19,11 @@ class _HomePageState extends State<HomePage> {
   final FirestoreService _firestoreService = FirestoreService();
   NoteType _selectedType = NoteType.personal;
   Color _selectedColor = Colors.blue;
+  final TypesNotifier _typesNotifier = TypesNotifier();
   late StreamSubscription<List<NoteType>> _typesSubscription;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   final ValueNotifier<NoteType> _selectedTypeNotifier = ValueNotifier(NoteType.personal);
-  final ValueNotifier<List<NoteType>> _typesNotifier = 
-      ValueNotifier<List<NoteType>>([...NoteType.defaultTypes]);
 
   @override
   void initState() {
@@ -32,14 +32,7 @@ class _HomePageState extends State<HomePage> {
         .getCustomNoteTypes()
         .listen((types) {
       if (mounted) {
-        NoteType.customTypes.clear();
-        NoteType.customTypes.addAll(types);
-        _typesNotifier.value = [...NoteType.allTypes];
-        
-        if (!NoteType.allTypes.contains(_selectedType)) {
-          _selectedType = NoteType.personal;
-          _selectedTypeNotifier.value = NoteType.personal;
-        }
+        _typesNotifier.updateTypes(types);
       }
     });
   }
@@ -55,32 +48,38 @@ class _HomePageState extends State<HomePage> {
   }
 
   void openNoteBox() {
-    _selectedType = NoteType.personal; // Add this line
-    _selectedTypeNotifier.value = NoteType.personal; // Add this line
+    _selectedType = NoteType.personal;
+    _selectedTypeNotifier.value = NoteType.personal;
     
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Add a new note"),
-        content: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTextField(
-                controller: _titleController,
-                hint: "Enter note title",
-                textInputAction: TextInputAction.next,
+        content: Container(
+          width: MediaQuery.of(context).size.width * 0.8, // Set width constraint
+          constraints: const BoxConstraints(maxWidth: 400), // Add max width
+          child: SingleChildScrollView( // Add scroll support
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTextField(
+                    controller: _titleController,
+                    hint: "Enter note title",
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildTextField(
+                    controller: _contentController,
+                    hint: "Enter note content",
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildNoteTypeSelector(),
+                ],
               ),
-              const SizedBox(height: 8),
-              _buildTextField(
-                controller: _contentController,
-                hint: "Enter note content",
-                maxLines: 3,
-              ),
-              const SizedBox(height: 8),
-              _buildNoteTypeSelector(),
-            ],
+            ),
           ),
         ),
         actions: [
@@ -110,7 +109,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _clearControllers() {
+   void _clearControllers() {
     _titleController.clear();
     _contentController.clear();
     _selectedType = NoteType.personal;
@@ -134,8 +133,8 @@ class _HomePageState extends State<HomePage> {
                   if (value == null || value.isEmpty) {
                     return 'Type name cannot be empty';
                   }
-                  if (_typesNotifier.value.any((type) => 
-                      type.name.toLowerCase() == value.toLowerCase())) {
+                  if (_typesNotifier.types.any((type) => 
+                    type.name.toLowerCase() == value.toLowerCase())) {
                     return 'Type name already exists';
                   }
                   return null;
@@ -182,213 +181,67 @@ class _HomePageState extends State<HomePage> {
 }
 
   Widget _buildNoteTypeSelector() {
-  return ValueListenableBuilder<List<NoteType>>(
-    valueListenable: _typesNotifier,
-    builder: (context, types, _) {
-      return ValueListenableBuilder<NoteType>(
-        valueListenable: _selectedTypeNotifier,
-        builder: (context, selectedType, _) {
-          final uniqueTypes = types.toSet().toList();
-
-          if (!uniqueTypes.contains(selectedType)) {
-            _selectedType = NoteType.personal;
-            _selectedTypeNotifier.value = NoteType.personal;
-          }
-
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: DropdownButton<NoteType>(
-                  isExpanded: true,
-                  value: selectedType,
-                  items: uniqueTypes.map((type) {
-                    return DropdownMenuItem(
-                      value: type,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: type.color,
-                              shape: BoxShape.circle,
+    return ListenableBuilder(
+      listenable: _typesNotifier,
+      builder: (context, _) {
+        return SizedBox(
+          width: double.infinity, // Force full width
+          child: IntrinsicHeight( // Use IntrinsicHeight
+            child: Row(
+              mainAxisSize: MainAxisSize.min, // Important
+              children: [
+                Flexible( // Use Flexible instead of Expanded
+                  child: DropdownButtonFormField<NoteType>( // Use FormField version
+                    value: _typesNotifier.selectedType,
+                    isExpanded: true,
+                    items: _typesNotifier.types.map((type) {
+                      return DropdownMenuItem(
+                        value: type,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: type.color,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              type.name,
-                              overflow: TextOverflow.ellipsis,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                type.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                          if (!NoteType.defaultTypes.contains(type))
-                            IconButton(
-                              icon: const Icon(Icons.delete, size: 20),
-                              onPressed: () async {
-                                // Show confirmation dialog
-                                final shouldDelete = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Delete Note Type'),
-                                    content: Text('Are you sure you want to delete "${type.name}"?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, true),
-                                        child: const Text('Delete'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-
-                                if (shouldDelete == true && context.mounted) {
-                                  try {
-                                    // Show loading overlay with PopScope
-                                    showDialog(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      barrierLabel: 'Deleting note type', // Add this line
-                                      builder: (context) => PopScope(
-                                        canPop: false,
-                                        child: Center(
-                                          child: Card(
-                                            elevation: 4,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Padding(
-                                              padding: const EdgeInsets.all(16.0),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const CircularProgressIndicator(),
-                                                  const SizedBox(height: 16),
-                                                  Text(
-                                                    'Deleting ${type.name}...',
-                                                    style: Theme.of(context).textTheme.bodyMedium,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-
-                                    await FirestoreService().deleteNoteType(type.id);
-                                    
-                                    if (context.mounted) {
-                                      Navigator.pop(context); // Remove loading overlay
-                                      
-                                      // Update state
-                                      NoteType.customTypes.removeWhere((t) => t.id == type.id);
-                                      final updatedTypes = [...NoteType.allTypes];
-                                      
-                                      // Update notifiers
-                                      _typesNotifier.value = updatedTypes;
-                                      
-                                      if (selectedType == type) {
-                                        onTypeChanged(NoteType.personal);
-                                      }
-
-                                      // Show success feedback with modern design
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Row(
-                                            children: [
-                                              const Icon(Icons.check_circle, color: Colors.white),
-                                              const SizedBox(width: 8),
-                                              Text('Note type "${type.name}" deleted'),
-                                            ],
-                                          ),
-                                          backgroundColor: Colors.green.shade600,
-                                          behavior: SnackBarBehavior.floating,
-                                          margin: const EdgeInsets.all(8),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          action: SnackBarAction(
-                                            label: 'UNDO',
-                                            textColor: Colors.white,
-                                            onPressed: () {
-                                              // Implement undo functionality if needed
-                                            },
-                                          ),
-                                        ),
-                                      );
-
-                                      // Trigger rebuild with animation
-                                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                                        _typesNotifier.notifyListeners();
-                                      });
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      Navigator.pop(context); // Remove loading overlay
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Row(
-                                            children: [
-                                              const Icon(Icons.error_outline, color: Colors.white),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  'Failed to delete: $e',
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          backgroundColor: Colors.red.shade600,
-                                          behavior: SnackBarBehavior.floating,
-                                          margin: const EdgeInsets.all(8),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          duration: const Duration(seconds: 4),
-                                          action: SnackBarAction(
-                                            label: 'RETRY',
-                                            textColor: Colors.white,
-                                            onPressed: () async {
-                                              // Implement retry functionality
-                                              await FirestoreService().deleteNoteType(type.id);
-                                            },
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                }
-                              },
-                            ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      onTypeChanged(value);
-                    }
-                  },
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        _typesNotifier.setSelectedType(value);
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: _addCustomNoteType,
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: _addCustomNoteType,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -440,6 +293,18 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> deleteNoteType(String typeId) async {
+    try {
+      await _firestoreService.deleteNoteType(typeId);
+      _typesNotifier.removeType(typeId);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting note type: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -449,7 +314,19 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         centerTitle: true,
-        title: const Text("Notes"),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/app_logo.png',
+              height: 90, // Adjust size as needed
+              width: 90,  // Adjust size as needed
+            ),
+            const SizedBox(width: 1), // Space between icon and text
+            // const Text("Pensieve"),  // Optional: keep or remove text
+          ],
+        ),
         backgroundColor: theme.colorScheme.primary,
         elevation: 0,
       ),
@@ -513,7 +390,7 @@ class _HomePageState extends State<HomePage> {
           Text(
             'Tap + to create a note',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onBackground.withOpacity(0.6),
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
             ),
           ),
         ],
@@ -522,70 +399,136 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildNoteCard(
-    QueryDocumentSnapshot doc, 
-    Map<String, dynamic> data,
-    NoteType noteType,
-    ThemeData theme,
-  ) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.2)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _showNoteDetailDialog(doc, data, noteType), // New method
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: noteType.color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      data['title'] ?? '',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  ),
-                  _buildNoteActions(doc.id, data, noteType, theme),
-                ],
-              ),
-              if (data['content']?.isNotEmpty == true) ...[
-                const SizedBox(height: 8),
-                Text(
-                  data['content'] ?? '',
-                  style: theme.textTheme.bodyMedium,
-                  maxLines: 2, // Limit to 2 lines
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              const SizedBox(height: 8),
-              Chip(
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                backgroundColor: noteType.color.withOpacity(0.1),
-                label: Text(
-                  data['type'],
-                  style: TextStyle(color: noteType.color),
+  QueryDocumentSnapshot doc, 
+  Map<String, dynamic> data,
+  NoteType noteType,
+  ThemeData theme,
+) {
+  return Hero(
+    tag: 'note-${doc.id}',
+    child: Material(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          elevation: 2,
+          shadowColor: theme.colorScheme.primary.withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: noteType.color.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => _showNoteDetailDialog(doc, data, noteType),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    noteType.color.withOpacity(0.05),
+                    Colors.transparent,
+                  ],
                 ),
               ),
-            ],
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: noteType.color,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: noteType.color.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            data['title'] ?? '',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        _buildNoteActions(doc.id, data, noteType, theme),
+                      ],
+                    ),
+                    if (data['content']?.isNotEmpty == true) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        data['content'] ?? '',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Chip(
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          backgroundColor: noteType.color.withOpacity(0.1),
+                          label: Text(
+                            data['type'],
+                            style: TextStyle(
+                              color: noteType.color,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                        ),
+                        Text(
+                          _formatDate(data['timestamp'] ?? Timestamp.now()),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
-    );
+    ),
+  );
+}
+
+String _formatDate(Timestamp timestamp) {
+  final date = timestamp.toDate();
+  final now = DateTime.now();
+  final difference = now.difference(date);
+
+  if (difference.inDays == 0) {
+    return 'Today';
+  } else if (difference.inDays == 1) {
+    return 'Yesterday';
+  } else if (difference.inDays < 7) {
+    return '${difference.inDays} days ago';
+  } else {
+    return '${date.day}/${date.month}/${date.year}';
   }
+}
 
   void _showNoteDetailDialog(
   QueryDocumentSnapshot doc,
@@ -595,38 +538,56 @@ class _HomePageState extends State<HomePage> {
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
-      title: Row(
-        children: [
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: noteType.color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(data['title'] ?? ''),
-          ),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      title: ConstrainedBox(  // Add this wrapper
+        constraints: const BoxConstraints(maxWidth: 300), // Adjust width as needed
+        child: Row(
+          mainAxisSize: MainAxisSize.min, // Add this
           children: [
-            Text(
-              data['content'] ?? '',
-              style: Theme.of(context).textTheme.bodyMedium,
+            Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: noteType.color,
+                shape: BoxShape.circle,
+              ),
             ),
-            const SizedBox(height: 16),
-            Chip(
-              label: Text(data['type']),
-              backgroundColor: noteType.color.withOpacity(0.1),
-              labelStyle: TextStyle(color: noteType.color),
+            const SizedBox(width: 8),
+            Flexible( // Change Expanded to Flexible
+              child: Text(
+                data['title'] ?? '',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: ConstrainedBox( // Add constraints
+          constraints: const BoxConstraints(
+            maxWidth: 300,
+            maxHeight: 400,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                data['content'] ?? '',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              Wrap( // Use Wrap instead of Row for chips
+                spacing: 8,
+                children: [
+                  Chip(
+                    label: Text(data['type']),
+                    backgroundColor: noteType.color.withOpacity(0.1),
+                    labelStyle: TextStyle(color: noteType.color),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -661,7 +622,7 @@ class _HomePageState extends State<HomePage> {
     mainAxisSize: MainAxisSize.min,
     children: [
       IconButton(
-        icon: Icon(Icons.edit, color: theme.colorScheme.primary),
+        icon: Icon(Icons.edit_outlined, color: theme.colorScheme.primary),
         tooltip: 'Edit',
         onPressed: () => _showUpdateDialog(
           docId,
@@ -669,12 +630,19 @@ class _HomePageState extends State<HomePage> {
           data['content'],
           noteType,
         ),
+        style: IconButton.styleFrom(
+          backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+        ),
       ),
+      const SizedBox(width: 8),
       IconButton(
-        icon: Icon(Icons.delete, color: theme.colorScheme.error),
+        icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
         tooltip: 'Delete',
         onPressed: () => _handleAsyncOperation(
           () => _firestoreService.deleteNote(docId),
+        ),
+        style: IconButton.styleFrom(
+          backgroundColor: theme.colorScheme.error.withOpacity(0.1),
         ),
       ),
     ],
@@ -743,6 +711,7 @@ class _HomePageState extends State<HomePage> {
           onPressed: () {
             if (titleController.text.isNotEmpty && 
                 contentController.text.isNotEmpty) {
+              final currentContext = context;
               _handleAsyncOperation(() async {
                 await _firestoreService.updateNote(
                   docID: docId,
@@ -750,8 +719,8 @@ class _HomePageState extends State<HomePage> {
                   content: contentController.text,
                   type: typeNotifier.value,
                 );
-                if (mounted) {
-                  Navigator.pop(context);
+                if (currentContext.mounted) {
+                  Navigator.pop(currentContext);
                 }
               });
             }
@@ -769,22 +738,22 @@ class NoteTypeSelector extends StatelessWidget {
   final NoteType selectedType;
   final ValueChanged<NoteType> onTypeChanged;
   final VoidCallback onAddPressed;
-  final ValueNotifier<List<NoteType>> typesNotifier;
+  final TypesNotifier typesNotifier;  // Change type here
 
   const NoteTypeSelector({
-    Key? key,
+    super.key,
     required this.selectedType,
     required this.onTypeChanged,
     required this.onAddPressed,
     required this.typesNotifier,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<NoteType>>(
-      valueListenable: typesNotifier,
-      builder: (context, types, _) {
-        final uniqueTypes = types.toSet().toList();
+    return ListenableBuilder(
+      listenable: typesNotifier,
+      builder: (context, _) {
+        final uniqueTypes = typesNotifier.types.toSet().toList();
 
         return Row(
           children: [
@@ -932,7 +901,7 @@ class NoteTypeSelector extends StatelessWidget {
                                         // Update state without closing the update dialog
                                         NoteType.customTypes.removeWhere((t) => t.id == type.id);
                                         final updatedTypes = [...NoteType.allTypes];
-                                        typesNotifier.value = updatedTypes;
+                                        typesNotifier.updateTypes(updatedTypes);
                                         
                                         if (selectedType == type) {
                                           onTypeChanged(NoteType.personal);
@@ -963,7 +932,7 @@ class NoteTypeSelector extends StatelessWidget {
                                             ),
                                           ),
                                         );
-
+                                        
                                         // Trigger rebuild with animation
                                         WidgetsBinding.instance.addPostFrameCallback((_) {
                                           typesNotifier.notifyListeners();
@@ -1028,15 +997,7 @@ class NoteTypeSelector extends StatelessWidget {
             ),
             IconButton(
               icon: const Icon(Icons.add),
-              onPressed: () {
-                // Remove the Navigator.pop(context) here
-                showDialog(
-                  context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    // ... existing add type dialog code ...
-                  ),
-                );
-              },
+              onPressed: onAddPressed,
             ),
           ],
         );

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'pages/home_page.dart';
 import 'package:crudtutorial/firebase_options.dart';
 import 'package:crudtutorial/theme/app_theme.dart';
+import 'pages/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,11 +38,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Modern Notes App',
+      title: 'Pensieve Notes',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: const HomePage(),
+      home: const SplashScreen(),
       // Add route transitions
       onGenerateRoute: (settings) {
         return PageRouteBuilder(
