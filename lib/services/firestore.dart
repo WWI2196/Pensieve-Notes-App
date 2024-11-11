@@ -8,10 +8,24 @@ class NoteType {
   final Color color;
   final String id;
 
-  const NoteType(this.name, this.color, {required this.id});
+  // Add animation properties
+  final double opacity;
+  final double scale;
+
+  const NoteType(
+    this.name,
+    this.color, {
+    required this.id,
+    this.opacity = 1.0,
+    this.scale = 1.0,
+  });
 
   // Add static map to track deleted types
   static final Map<String, NoteType> deletedTypes = {};
+
+  // Add to NoteType class
+  static const animationDuration = Duration(milliseconds: 300);
+  static const animationCurve = Curves.easeInOut;
 
   @override
   String toString() => name;
@@ -43,6 +57,8 @@ class NoteType {
         'name': name,
         'color': color.value.toString(),
         'id': id,
+        'opacity': opacity,
+        'scale': scale,
       };
 
   static NoteType fromMap(Map<String, dynamic> map, String docId) {
@@ -50,6 +66,8 @@ class NoteType {
       map['name'] as String,
       Color(int.parse(map['color'] as String)),
       id: docId,
+      opacity: map['opacity'] as double? ?? 1.0,
+      scale: map['scale'] as double? ?? 1.0,
     );
   }
 
@@ -93,6 +111,23 @@ class NoteType {
   // Add dispose method
   static void dispose() {
     _typeController.close();
+  }
+
+  // Add copyWith method
+  NoteType copyWith({
+    String? name,
+    Color? color,
+    String? id,
+    double? opacity,
+    double? scale,
+  }) {
+    return NoteType(
+      name ?? this.name,
+      color ?? this.color,
+      id: id ?? this.id,
+      opacity: opacity ?? this.opacity,
+      scale: scale ?? this.scale,
+    );
   }
 }
 
