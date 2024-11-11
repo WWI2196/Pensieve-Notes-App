@@ -120,7 +120,7 @@ class _HomePageState extends State<HomePage> {
   void _addCustomNoteType() {
   showDialog(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (dialogContext) => AlertDialog(
       title: const Text("Add Custom Note Type"),
       content: StatefulBuilder(
         builder: (context, setDialogState) => Column(
@@ -155,7 +155,7 @@ class _HomePageState extends State<HomePage> {
         TextButton(
           onPressed: () {
             _newTypeController.clear();
-            Navigator.pop(context);
+            Navigator.pop(dialogContext); // Only close the add type dialog
           },
           child: const Text("Cancel"),
         ),
@@ -168,8 +168,8 @@ class _HomePageState extends State<HomePage> {
                   _selectedColor,
                 );
                 _newTypeController.clear();
-                if (mounted) { // Add mounted check before using context
-                  Navigator.pop(context);
+                if (dialogContext.mounted) { // Add mounted check before using context
+                  Navigator.pop(dialogContext); // Only close the add type dialog
                 }
               });
             }
@@ -893,12 +893,11 @@ class NoteTypeSelector extends StatelessWidget {
 
                                   if (shouldDelete == true && context.mounted) {
                                     try {
-                                      // Show loading overlay with PopScope
+                                      // Show loading overlay
                                       showDialog(
                                         context: context,
                                         barrierDismissible: false,
-                                        barrierLabel: 'Deleting note type', // Add this line
-                                        builder: (context) => PopScope(
+                                        builder: (loadingContext) => PopScope(
                                           canPop: false,
                                           child: Center(
                                             child: Card(
@@ -928,20 +927,18 @@ class NoteTypeSelector extends StatelessWidget {
                                       await FirestoreService().deleteNoteType(type.id);
                                       
                                       if (context.mounted) {
-                                        Navigator.pop(context); // Remove loading overlay
+                                        Navigator.pop(context); // Only close the loading overlay
                                         
-                                        // Update state
+                                        // Update state without closing the update dialog
                                         NoteType.customTypes.removeWhere((t) => t.id == type.id);
                                         final updatedTypes = [...NoteType.allTypes];
-                                        
-                                        // Update notifiers
                                         typesNotifier.value = updatedTypes;
                                         
                                         if (selectedType == type) {
                                           onTypeChanged(NoteType.personal);
                                         }
 
-                                        // Show success feedback with modern design
+                                        // Show success feedback
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             content: Row(
@@ -974,7 +971,8 @@ class NoteTypeSelector extends StatelessWidget {
                                       }
                                     } catch (e) {
                                       if (context.mounted) {
-                                        Navigator.pop(context); // Remove loading overlay
+                                        Navigator.pop(context); // Only close the loading overlay
+                                        // Show error snackbar without closing dialog
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             content: Row(
@@ -1030,7 +1028,15 @@ class NoteTypeSelector extends StatelessWidget {
             ),
             IconButton(
               icon: const Icon(Icons.add),
-              onPressed: onAddPressed,
+              onPressed: () {
+                // Remove the Navigator.pop(context) here
+                showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    // ... existing add type dialog code ...
+                  ),
+                );
+              },
             ),
           ],
         );
