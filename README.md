@@ -37,7 +37,7 @@ A modern, feature-rich note-taking application built with Flutter and Firebase. 
 
 1. Clone the repository
 ```sh
-git clone https://github.com/yourusername/pensieve-notes.git
+git clone https://github.com/WWI2196/crudtutorial.git
 ```
 
 2. Install dependencies
