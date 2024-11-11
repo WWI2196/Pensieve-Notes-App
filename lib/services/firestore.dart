@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -7,6 +9,9 @@ class NoteType {
   final String id;
 
   const NoteType(this.name, this.color, {required this.id});
+
+  // Add static map to track deleted types
+  static final Map<String, NoteType> deletedTypes = {};
 
   @override
   String toString() => name;
@@ -29,7 +34,10 @@ class NoteType {
   static final List<NoteType> defaultTypes = [personal, educational, other];
   static final List<NoteType> customTypes = [];
 
-  static List<NoteType> get allTypes => [...defaultTypes, ...customTypes];
+  static List<NoteType> get allTypes {
+    final types = [...defaultTypes, ...customTypes];
+    return types.toSet().toList(); // Ensure unique items
+  }
 
   Map<String, dynamic> toMap() => {
         'name': name,
@@ -45,10 +53,23 @@ class NoteType {
     );
   }
 
-  static NoteType fromString(String typeName) {
+  // Updated fromString method
+  static NoteType fromString(String typeName, {String? typeId, String? colorValue}) {
     return allTypes.firstWhere(
       (type) => type.name == typeName,
-      orElse: () => other,
+      orElse: () {
+        if (typeId != null && deletedTypes.containsKey(typeId)) {
+          return deletedTypes[typeId]!;
+        }
+        if (colorValue != null) {
+          return NoteType(
+            typeName,
+            Color(int.parse(colorValue)),
+            id: typeId ?? 'deleted_${DateTime.now().millisecondsSinceEpoch}',
+          );
+        }
+        return other;
+      },
     );
   }
 
@@ -57,6 +78,21 @@ class NoteType {
     if (id.isNotEmpty) {
       await db.collection('noteTypes').doc(id).delete();
     }
+  }
+
+  // Add stream controller for type changes
+  static final _typeController = StreamController<List<NoteType>>.broadcast();
+  static Stream<List<NoteType>> get typeStream => _typeController.stream;
+
+  static void updateTypes(List<NoteType> types) {
+    customTypes.clear();
+    customTypes.addAll(types);
+    _typeController.add(allTypes);
+  }
+
+  // Add dispose method
+  static void dispose() {
+    _typeController.close();
   }
 }
 
@@ -78,6 +114,12 @@ class FirestoreService {
         return NoteType.fromMap(doc.data(), doc.id);
       }).toList();
     });
+  }
+
+  // Added synchronous type fetch method
+  Future<List<NoteType>> getCustomNoteTypesSync() async {
+    final snapshot = await _db.collection('noteTypes').get();
+    return snapshot.docs.map((doc) => NoteType.fromMap(doc.data(), doc.id)).toList();
   }
 
   // Add note with validation
@@ -115,6 +157,7 @@ class FirestoreService {
       'title': title,
       'content': content,
       'type': type.name,
+      'typeId': type.id,
       'color': type.color.value.toString(),
       'timestamp': FieldValue.serverTimestamp(),
     });
@@ -130,8 +173,22 @@ class FirestoreService {
     await _db.collection('notes').doc(docID).delete();
   }
 
-  // Add delete note type method
+  // Updated delete note type method
   Future<void> deleteNoteType(String typeId) async {
-    await _db.collection('noteTypes').doc(typeId).delete();
+    final typeDoc = await _db.collection('noteTypes').doc(typeId).get();
+    if (typeDoc.exists) {
+      final typeData = typeDoc.data()!;
+      final deletedType = NoteType.fromMap(typeData, typeId);
+      
+      // Store deleted type
+      NoteType.deletedTypes[typeId] = deletedType;
+      
+      // Update local state first
+      NoteType.customTypes.removeWhere((type) => type.id == typeId);
+      NoteType.updateTypes([...NoteType.customTypes]); // Trigger stream update
+      
+      // Delete from Firestore
+      await _db.collection('noteTypes').doc(typeId).delete();
+    }
   }
 }
