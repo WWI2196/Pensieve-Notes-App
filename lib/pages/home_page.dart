@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crudtutorial/constants.dart';
-import 'package:crudtutorial/services/animations.dart';
-import 'package:crudtutorial/services/firestore.dart';
-import 'package:crudtutorial/services/types_notifier.dart';
+import 'package:pensieve/constants.dart';
+import 'package:pensieve/services/animations.dart';
+import 'package:pensieve/services/firestore.dart';
+import 'package:pensieve/services/types_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:async';

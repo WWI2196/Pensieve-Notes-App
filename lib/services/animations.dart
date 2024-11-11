@@ -1,5 +1,5 @@
 // animations.dart
-import 'package:crudtutorial/constants.dart';
+import 'package:pensieve/constants.dart';
 import 'package:flutter/material.dart';
 
 

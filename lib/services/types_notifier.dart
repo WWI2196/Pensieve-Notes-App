@@ -1,6 +1,6 @@
 // types_notifier.dart
 import 'package:flutter/foundation.dart';
-import 'package:crudtutorial/services/firestore.dart';
+import 'package:pensieve/services/firestore.dart';
 
 class TypesNotifier extends ChangeNotifier {
   List<NoteType> _types = [...NoteType.defaultTypes];

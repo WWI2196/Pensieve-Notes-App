@@ -2,8 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'pages/home_page.dart';
-import 'package:crudtutorial/firebase_options.dart';
-import 'package:crudtutorial/theme/app_theme.dart';
+import 'package:pensieve/firebase_options.dart';
+import 'package:pensieve/theme/app_theme.dart';
 import 'pages/splash_screen.dart';
 
 void main() async {
