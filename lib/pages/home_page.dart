@@ -868,16 +868,74 @@ String _formatDate(Timestamp timestamp) {
                   children: [
                     // Top row with icon and close button
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildTypeIcon(noteType),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            data['title'] ?? '',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                data['title'] ?? '',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                // Remove overflow ellipsis to show full title
+                              ),
+                              const SizedBox(height: 8),
+                              // Metadata row
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: noteType.color.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      data['type'] ?? '',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: noteType.color,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.surface.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.access_time,
+                                          size: 16,
+                                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _formatDate(data['timestamp'] ?? Timestamp.now()),
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                         IconButton(
@@ -889,70 +947,6 @@ String _formatDate(Timestamp timestamp) {
                             ),
                           ),
                           onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    // Metadata row
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: noteType.color.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _getNoteTypeIcon(noteType.name),
-                                size: 16,
-                                color: noteType.color,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                data['type'] ?? '',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: noteType.color,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.access_time,
-                                size: 16,
-                                color: theme.colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _formatDate(data['timestamp'] ?? Timestamp.now()),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ],
                     ),
