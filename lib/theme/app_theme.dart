@@ -26,6 +26,7 @@ class AppTheme {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -38,6 +39,7 @@ class AppTheme {
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: primaryColor, width: 2),
       ),
+      hintStyle: TextStyle(color: Colors.grey.shade400),
     ),
     // Modern Button styling
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -48,6 +50,12 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
       ),
+    ),
+    chipTheme: ChipThemeData(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     ),
     // Modern FAB styling
     floatingActionButtonTheme: FloatingActionButtonThemeData(
